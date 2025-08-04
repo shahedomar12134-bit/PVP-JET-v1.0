@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jet Fight Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            display: flex;
+            flex-direction: column; /* Arrange items vertically */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #222;
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            position: relative; /* For absolute positioning of score/message */
+        }
+        #game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%; /* Take full width */
+            max-width: 400px; /* Max width for the game area */
+            height: 600px; /* Fixed height for game logic */
+            margin: auto; /* Center the container */
+        }
+        canvas {
+            background-color: #000;
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            width: 100%; /* Canvas fills its container */
+            height: 100%; /* Canvas fills its container */
+        }
+        #score-board, #message-box {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #0ff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            z-index: 10;
+        }
+        #score-board {
+            top: 20px;
+            left: 20px;
+        }
+        #message-box {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            color: #f00;
+            display: none; /* Hidden by default */
+            z-index: 20;
+        }
+        #message-box button {
+            background-color: #0ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        #message-box button:hover {
+            background-color: #0cc;
+            transform: scale(1.05);
+        }
+
+        /* Controls styling */
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px; /* Match game container width */
+            padding: 20px 0;
+            box-sizing: border-box;
+            gap: 10px; /* Space between buttons */
+        }
+        .control-button {
+            background-color: #0ff;
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 25px;
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            flex: 1; /* Distribute space evenly */
+            text-align: center;
+            user-select: none; /* Prevent text selection on tap */
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+        }
+        .control-button:active {
+            background-color: #0cc;
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(0, 255, 255, 0.6);
+        }
+        #fireButton {
+            background-color: #f00;
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.4);
+        }
+        #fireButton:active {
+            background-color: #cc0000;
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(255, 0, 0, 0.6);
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 600px) {
+            #game-container {
+                height: 70vh; /* Adjust height for smaller screens */
+            }
+            #controls {
+                flex-direction: row; /* Keep buttons in a row */
+                padding: 10px;
+            }
+            .control-button {
+                padding: 10px 15px;
+                font-size: 1.5em;
+            }
+            #score-board {
+                font-size: 1.2em;
+                padding: 8px 15px;
+                top: 10px;
+                left: 10px;
+            }
+            #message-box {
+                font-size: 1.5em;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="score-board">Score: <span id="score">0</span></div>
+        <div id="message-box">
+            Game Over!
+            <button id="restartButton">Restart</button>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button id="leftButton" class="control-button">◀</button>
+        <button id="fireButton" class="control-button">🔥</button>
+        <button id="rightButton" class="control-button">▶</button>
+    </div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const messageBox = document.getElementById('message-box');
+        const restartButton = document.getElementById('restartButton');
+        const leftButton = document.getElementById('leftButton');
+        const rightButton = document.getElementById('rightButton');
+        const fireButton = document.getElementById('fireButton');
+
+        // Game settings
+        const GAME_WIDTH = 400;
+        const GAME_HEIGHT = 600;
+        const PLAYER_SPEED = 5;
+        const BULLET_SPEED = 7;
+        const ENEMY_SPEED_MIN = 1;
+        const ENEMY_SPEED_MAX = 3;
+        const ENEMY_SPAWN_INTERVAL = 1000; // milliseconds
+        const MAX_ENEMIES = 5;
+
+        let gameRunning = false;
+        let score = 0;
+        let lastEnemySpawnTime = 0;
+        let animationFrameId;
+
+        // Player object
+        const player = {
+            x: GAME_WIDTH / 2 - 20,
+            y: GAME_HEIGHT - 60,
+            width: 40,
+            height: 40,
+            dx: 0, // Direction for movement: -1 for left, 1 for right, 0 for stop
+            draw() {
+                ctx.fillStyle = '#00F'; // Player jet color (Blue)
+                ctx.beginPath();
+                // Main body of the jet (triangle pointing up)
+                ctx.moveTo(this.x + this.width / 2, this.y); // Top point
+                ctx.lineTo(this.x, this.y + this.height); // Bottom-left
+                ctx.lineTo(this.x + this.width, this.y + this.height); // Bottom-right
+                ctx.closePath();
+                ctx.fill();
+
+                // Wings (small rectangles)
+                ctx.fillRect(this.x - 10, this.y + this.height * 0.7, 10, 5); // Left wing
+                ctx.fillRect(this.x + this.width, this.y + this.height * 0.7, 10, 5); // Right wing
+
+                // Cockpit (small circle)
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height * 0.3, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ADD8E6'; // Light blue for cockpit
+                ctx.fill();
+            },
+            update() {
+                this.x += this.dx * PLAYER_SPEED;
+                // Keep player within bounds
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > GAME_WIDTH) this.x = GAME_WIDTH - this.width;
+            }
+        };
+
+        // Bullets array
+        const bullets = [];
+
+        // Bullet object constructor
+        function Bullet(x, y) {
+            this.x = x;
+            this.y = y;
+            this.width = 5;
+            this.height = 15;
+            this.color = '#0F0';
+            this.draw = function() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            };
+            this.update = function() {
+                this.y -= BULLET_SPEED;
+            };
+        }
+
+        // Enemies array
+        const enemies = [];
+
+        // Enemy object constructor
+        function Enemy(x, y, speed, type) {
+            this.x = x;
+            this.y = y;
+            this.width = 40;
+            this.height = 40;
+            this.speed = speed;
+            this.type = type; // 'helicopter', 'orangeJet', or 'greenJet'
+
+            this.draw = function() {
+                if (this.type === 'helicopter') {
+                    ctx.fillStyle = '#F00'; // Red for helicopter
+                    // Helicopter body (rectangle)
+                    ctx.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.4, this.width * 0.6, this.height * 0.3);
+                    // Tail (small rectangle)
+                    ctx.fillRect(this.x + this.width * 0.8, this.y + this.height * 0.5, this.width * 0.2, this.height * 0.1);
+                    // Rotor (thin rectangle)
+                    ctx.fillRect(this.x, this.y + this.height * 0.3, this.width, 5);
+                } else if (this.type === 'orangeJet') {
+                    ctx.fillStyle = '#FFA500'; // Orange for enemy jet
+                    ctx.beginPath();
+                    // Main body of the jet (triangle pointing down)
+                    ctx.moveTo(this.x + this.width / 2, this.y + this.height); // Bottom point
+                    ctx.lineTo(this.x, this.y); // Top-left
+                    ctx.lineTo(this.x + this.width, this.y); // Top-right
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Wings (small rectangles)
+                    ctx.fillRect(this.x - 10, this.y + this.height * 0.3, 10, 5); // Left wing
+                    ctx.fillRect(this.x + this.width, this.y + this.height * 0.3, 10, 5); // Right wing
+
+                    // Cockpit (small circle)
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height * 0.7, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ADD8E6'; // Light blue for cockpit
+                    ctx.fill();
+                } else if (this.type === 'greenJet') {
+                    ctx.fillStyle = '#008000'; // Green for the new enemy jet
+                    ctx.beginPath();
+                    // Main body (more angular, pointing down)
+                    ctx.moveTo(this.x + this.width / 2, this.y + this.height); // Bottom center
+                    ctx.lineTo(this.x + this.width * 0.1, this.y + this.height * 0.2); // Left top
+                    ctx.lineTo(this.x + this.width * 0.9, this.y + this.height * 0.2); // Right top
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Rear wings/stabilizers
+                    ctx.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.8, this.width * 0.6, 5); // Horizontal stabilizer
+                    ctx.fillRect(this.x + this.width * 0.45, this.y + this.height * 0.6, 5, this.height * 0.2); // Vertical stabilizer
+                }
+            };
+            this.update = function() {
+                this.y += this.speed;
+            };
+        }
+
+        // Collision detection
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+
+        // Game loop
+        function gameLoop(currentTime) {
+            if (!gameRunning) return;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Update and draw player
+            player.update();
+            player.draw();
+
+            // Spawn enemies
+            if (currentTime - lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL && enemies.length < MAX_ENEMIES) {
+                const enemyX = Math.random() * (GAME_WIDTH - 40);
+                const enemySpeed = ENEMY_SPEED_MIN + Math.random() * (ENEMY_SPEED_MAX - ENEMY_SPEED_MIN);
+                const enemyTypes = ['helicopter', 'orangeJet', 'greenJet']; // All possible enemy types
+                const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)]; // Pick one randomly
+                enemies.push(new Enemy(enemyX, -40, enemySpeed, randomType)); // Pass the type
+                lastEnemySpawnTime = currentTime;
+            }
+
+            // Update and draw bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.update();
+                bullet.draw();
+
+                // Remove bullets off-screen
+                if (bullet.y + bullet.height < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Update and draw enemies
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.update();
+                enemy.draw();
+
+                // Check for collision with player
+                if (checkCollision(player, enemy)) {
+                    gameOver();
+                    return; // Stop the loop immediately
+                }
+
+                // Remove enemies off-screen
+                if (enemy.y > GAME_HEIGHT) {
+                    enemies.splice(i, 1);
+                }
+
+                // Check for bullet-enemy collision
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const bullet = bullets[j];
+                    if (checkCollision(bullet, enemy)) {
+                        // Collision detected, remove both bullet and enemy
+                        enemies.splice(i, 1);
+                        bullets.splice(j, 1);
+                        score += 10;
+                        scoreDisplay.textContent = score;
+                        break; // Break inner loop as enemy is removed
+                    }
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- Control Button Event Listeners ---
+
+        // Left Button
+        leftButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior (e.g., scrolling)
+            player.dx = -1; // Move left
+        });
+        leftButton.addEventListener('touchend', () => {
+            player.dx = 0; // Stop
+        });
+        leftButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            player.dx = -1;
+        });
+        leftButton.addEventListener('mouseup', () => {
+            player.dx = 0;
+        });
+        leftButton.addEventListener('mouseleave', () => { // If mouse leaves button while pressed
+            player.dx = 0;
+        });
+
+        // Right Button
+        rightButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.dx = 1; // Move right
+        });
+        rightButton.addEventListener('touchend', () => {
+            player.dx = 0; // Stop
+        });
+        rightButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            player.dx = 1;
+        });
+        rightButton.addEventListener('mouseup', () => {
+            player.dx = 0;
+        });
+        rightButton.addEventListener('mouseleave', () => { // If mouse leaves button while pressed
+            player.dx = 0;
+        });
+
+        // Fire Button
+        fireButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameRunning) {
+                bullets.push(new Bullet(player.x + player.width / 2 - 2.5, player.y));
+            }
+        });
+        fireButton.addEventListener('click', (e) => { // Use click for desktop, touchstart for mobile
+            e.preventDefault();
+            if (gameRunning) {
+                bullets.push(new Bullet(player.x + player.width / 2 - 2.5, player.y));
+            }
+        });
+
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            messageBox.style.display = 'block';
+        }
+
+        function resetGame() {
+            score = 0;
+            scoreDisplay.textContent = score;
+            bullets.length = 0; // Clear bullets
+            enemies.length = 0; // Clear enemies
+            player.x = GAME_WIDTH / 2 - 20; // Reset player position
+            player.dx = 0; // Stop player movement
+            messageBox.style.display = 'none';
+            gameRunning = true;
+            lastEnemySpawnTime = performance.now(); // Reset spawn timer
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        restartButton.addEventListener('click', resetGame);
+
+        // Initialize game on window load
+        window.onload = function() {
+            // Set canvas dimensions
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+
+            // Start the game
+            resetGame();
+        };
+
+        // Handle window resize to keep canvas responsive
+        window.addEventListener('resize', () => {
+            // The canvas dimensions are fixed (GAME_WIDTH, GAME_HEIGHT) for game logic,
+            // but the CSS ensures it scales responsively within the viewport.
+            // No need to redraw game elements on resize unless game dimensions change.
+        });
+
+    </script>
+</body>
+</html>
