@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAMING ANDROID - Live Streaming</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #16213e;
+            --accent-colo()r-1: #e94560;
+            --accent-color-2: #00f5d4;
+            --text-color: #ffffff;
+            --font-family: 'Inter', sans-serif;
+            --glow-color-1: rgba(233, 69, 96, 0.3);
+            --glow-color-2: rgba(0, 245, 212, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: radial-gradient(circle at 15% 15%, var(--glow-color-1), transparent 30%),
+                              radial-gradient(circle at 85% 85%, var(--glow-color-2), transparent 40%);
+            background-attachment: fixed;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+            background: linear-gradient(90deg, var(--accent-color-1), var(--accent-color-2));
+            position: relative;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+        }
+
+        .logo svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .rotate {
+            animation: rotate 8s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        main {
+            display: flex;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        #video-player-section {
+            flex: 3;
+            position: relative;
+        }
+
+        #player-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            background-color: #000;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease-in-out;
+        }
+
+        #player-container.loading {
+            opacity: 0.7;
+        }
+
+        #player-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        #error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            background-color: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #player-placeholder {
+            display: none;
+        }
+
+        .sticky-player {
+            position: fixed !important;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            height: 180px;
+            padding-bottom: 0 !important;
+            z-index: 1000;
+        }
+
+        #channel-list-sidebar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+
+        #channel-list-sidebar h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--accent-color-2);
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease-in-out;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .channel-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .channel-item.active {
+            background-color: var(--accent-color-1);
+            color: var(--bg-color);
+            font-weight: bold;
+        }
+
+        .channel-icon {
+            margin-right: 15px;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .channel-item:hover .channel-icon {
+            transform: rotate(15deg);
+        }
+
+        #channel-list-sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #channel-list-sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #channel-list-sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color-2);
+            border-radius: 10px;
+            border: 2px solid var(--primary-color);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        footer a {
+            color: var(--accent-color-1);
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                flex-direction: column;
+            }
+
+            #channel-list-sidebar {
+                height: auto;
+                max-height: 400px;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .sticky-player {
+                width: 240px;
+                height: 135px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle class="rotate" cx="50" cy="50" r="45" fill="none" stroke-width="5" stroke="url(#grad)"/>
+                <polygon points="40,30 70,50 40,70" fill="url(#grad)"/>
+                <defs>
+                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:var(--accent-color-1);stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:var(--accent-color-2);stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        <h1>GAMING ANDROID</h1>
+    </header>
+
+    <div class="container">
+        <main>
+            <section id="video-player-section">
+                <div id="player-container">
+                    <div id="error-message">Video unavailable or failed to load. Please select another stream.</div>
+                    <iframe id="youtube-player" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                </div>
+                <div id="player-placeholder"></div>
+            </section>
+
+            <aside id="channel-list-sidebar">
+                <h2>Stream Sanctuary</h2>
+                <div id="channel-list"></div>
+            </aside>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; <span id="current-year"></span>GAMING ANDROID. All streams courtesy of <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer">YouTube</a>.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const channels = [
+                // Music & Ambience
+                { name: 'Lofi Girl', icon: '🎵', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' },
+                { name: 'Synthwave Boy', icon: '🌃', url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY' },
+                { name: 'Jazz Hop Cafe', icon: '☕', url: 'https://www.youtube.com/watch?v=7NOSDKb0HlU' },
+                { name: 'Chillhop Music', icon: '🦝', url: 'https://www.youtube.com/watch?v=5yx6BWlEVcY' },
+                { name: 'Space Ambient Music', icon: '🌌', url: 'https://www.youtube.com/watch?v=ZS_6-IwMPmQ' },
+
+                // Bangladeshi News
+                { name: 'Somoy TV', icon: '🇧🇩', url: 'https://www.youtube.com/live/TdwhCOFh9OA?si=XXIIiUCmyW5p6sLs' },
+                { name: 'Jamuna TV', icon: '🇧🇩', url: 'https://www.youtube.com/live/rd-XAjBEaq4?si=LAVtKy8TLKuGJKM4' },
+                { name: 'Channel 24', icon: '🇧🇩', url: 'https://www.youtube.com/live/uCrFivSCzNo?si=q5d-_ccyLsoI7x32' },
+                { name: 'Motu Patlu', icon: '🇧🇩', url: 'https://www.youtube.com/live/ogDBE-TbJCE?si=DjxB8BVUSusVfgAH' },
+                { name: 'Ekattor TV', icon: '🇧🇩', url: 'https://www.youtube.com/live/jDWP74qcYfM?si=jDAtKvHk70wlX-6j' },
+                { name: 'DBC News', icon: '🇧🇩', url: 'https://www.youtube.com/live/PsvxiFWAU7s?si=F1JYZRsm1vsfJ5Tl' },
+
+                // International News & Science
+                { name: 'Motu Patlu live', icon: '📰', url: 'https://www.youtube.com/live/5wngjzRiiK0?si=YDnGUSxmr9jl3Ww8' },
+                { name: 'Sansad TV', icon: '🏛️', url: 'https://www.youtube.com/watch?v=wNoG1yXJ6j4' },
+                { name: 'NASA TV', icon: '🚀', url: 'https://www.youtube.com/watch?v=21X5lGlDOfg' },
+                
+                // Scenery & Cams
+                { name: 'Tokyo Street View', icon: '🗼', url: 'https://www.youtube.com/watch?v=Q743f_n8Xp8' },
+                { name: 'New York City Cam', icon: '🗽', url: 'https://www.youtube.com/watch?v=F_R_1_S3g24' },
+                { name: 'Tropical Island Ambience', icon: '🏝️', url: 'https://www.youtube.com/watch?v=8mD9072p_8Y' },
+                { name: 'Cozy Rainy Day', icon: '🌧️', url: 'https://www.youtube.com/watch?v=d_6L-sA_y9U' },
+                { name: 'Peaceful Nature', icon: '🌲', url: 'https://www.youtube.com/watch?v=BHACKWHW33w' },
+                { name: 'Aquarium & Fish', icon: '🐠', url: 'https://www.youtube.com/watch?v=F1x8_2b8_0k' },
+                { name: 'Fireplace', icon: '🔥', url: 'https://www.youtube.com/watch?v=L_LUpnjgPso' },
+                { name: '4K Space Station', icon: '🛰️', url: 'https://www.youtube.com/live/86YLFOog4GM' }
+            ];
+
+            const player = document.getElementById('youtube-player');
+            const playerContainer = document.getElementById('player-container');
+            const playerPlaceholder = document.getElementById('player-placeholder');
+            const channelList = document.getElementById('channel-list');
+            const errorMessage = document.getElementById('error-message');
+            
+            let currentChannelId = null;
+
+            function getEmbedUrl(url) {
+                let videoId = '';
+                let isLiveChannel = false;
+                
+                try {
+                    if (url.includes('youtu.be/')) {
+                        videoId = url.split('youtu.be/')[1].split('?')[0];
+                    } else if (url.includes('/live/')) {
+                        videoId = url.split('/live/')[1].split('?')[0];
+                    } else if (url.includes('/channel/')) {
+                        isLiveChannel = true;
+                        videoId = url.split('/channel/')[1].split('/')[0];
+                    } else {
+                        const urlParams = new URLSearchParams(new URL(url).search);
+                        videoId = urlParams.get('v');
+                    }
+                } catch (e) {
+                    console.error("Invalid URL:", url);
+                    return null;
+                }
+
+                if (!videoId) return null;
+
+                const base = 'https://www.youtube.com/embed/';
+                const params = '?autoplay=1&mute=1&controls=1&modestbranding=1&rel=0&playsinline=1';
+
+                if (isLiveChannel) {
+                    return `${base}live_stream?channel=${videoId}${params}`;
+                } else {
+                    return `${base}${videoId}${params}&loop=1&playlist=${videoId}`;
+                }
+            }
+            
+            function loadChannel(url, element) {
+                playerContainer.classList.add('loading');
+                errorMessage.style.display = 'none';
+
+                const embedUrl = getEmbedUrl(url);
+                
+                if (embedUrl) {
+                    player.src = embedUrl;
+                    player.onload = () => {
+                        playerContainer.classList.remove('loading');
+                    };
+                    player.onerror = () => {
+                        errorMessage.style.display = 'block';
+                        playerContainer.classList.remove('loading');
+                    }
+
+                    if (currentChannelId) {
+                        const activeElement = document.getElementById(currentChannelId);
+                        if (activeElement) {
+                           activeElement.classList.remove('active');
+                        }
+                    }
+                    element.classList.add('active');
+                    currentChannelId = element.id;
+
+                } else {
+                    errorMessage.style.display = 'block';
+                    playerContainer.classList.remove('loading');
+                }
+            }
+
+            channels.forEach((channel, index) => {
+                const channelItem = document.createElement('div');
+                channelItem.className = 'channel-item';
+                channelItem.id = `channel-${index}`;
+                channelItem.innerHTML = `<span class="channel-icon">${channel.icon}</span> ${channel.name}`;
+                channelItem.title = channel.name;
+                channelItem.addEventListener('click', () => loadChannel(channel.url, channelItem));
+                channelList.appendChild(channelItem);
+            });
+
+            // Sticky player logic
+            const playerSection = document.getElementById('video-player-section');
+            window.addEventListener('scroll', () => {
+                if (!playerSection) return;
+                const playerRect = playerSection.getBoundingClientRect();
+                if (playerRect.bottom < 0) {
+                    playerContainer.classList.add('sticky-player');
+                    playerPlaceholder.style.height = `${playerRect.height}px`;
+                    playerPlaceholder.style.display = 'block';
+                } else {
+                    playerContainer.classList.remove('sticky-player');
+                    playerPlaceholder.style.display = 'none';
+                }
+            });
+
+            // Set current year in footer
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+
+            // Load default channel
+            if (channels.length > 0) {
+                const defaultChannelElement = document.getElementById('channel-0');
+                if (defaultChannelElement) {
+                   loadChannel(channels[0].url, defaultChannelElement);
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
